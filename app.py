@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-# Pengaturan Halaman Streamlit
+# 1. Konfigurasi Halaman Streamlit
 st.set_page_config(
     page_title="Dashboard Data Aset BMN",
     page_icon="📦",
@@ -11,11 +11,10 @@ st.set_page_config(
 st.title("📦 Dashboard Data Aset BMN")
 st.write("Aplikasi visualisasi dan pencarian data aset Barang Milik Negara (BMN).")
 
-# Nama file Excel yang tepat
 FILE_PATH = "daftar-aset-1.xlsx"
 
-# Kolom yang ingin ditampilkan
-KOLOM_PILIHAN = [
+# Daftar target kolom yang ingin diambil
+TARGET_KOLOM = [
     "Jenis BMN",
     "Nama Satker",
     "Kode Barang",
@@ -29,30 +28,29 @@ KOLOM_PILIHAN = [
 @st.cache_data
 def load_data(file_path):
     try:
-        # Membaca file Excel (otomatis mengambil sheet pertama / Master Aset)
         df = pd.read_excel(file_path)
         
-        # Bersihkan nama kolom dari spasi berlebih di awal/akhir
+        # Bersihkan nama kolom dari spasi berlebih
         df.columns = df.columns.str.strip()
         
-        # Cocokkan nama kolom (case-insensitive)
-        column_mapping = {col.lower(): col for col in df.columns}
-        target_cols = []
-        for target in KOLOM_PILIHAN:
-            if target.lower() in column_mapping:
-                target_cols.append(column_mapping[target.lower()])
+        # Mapping kolom tanpa membedakan huruf besar/kecil (case-insensitive)
+        existing_cols = {col.lower(): col for col in df.columns}
+        selected_cols = []
         
-        df_filtered = df[target_cols]
-        
-        # Hapus baris yang seluruh kolom nilainya kosong
-        df_filtered = df_filtered.dropna(how='all')
-        
+        for target in TARGET_KOLOM:
+            target_lower = target.lower()
+            if target_lower in existing_cols:
+                selected_cols.append(existing_cols[target_lower])
+            elif target_lower == "merk" and "merek" in existing_cols:
+                selected_cols.append(existing_cols["merek"])
+                
+        df_filtered = df[selected_cols].dropna(how="all")
         return df_filtered
     except Exception as e:
         st.error(f"Gagal membaca file: {e}")
         return pd.DataFrame()
 
-# Load Data
+# 2. Load Data
 df = load_data(FILE_PATH)
 
 if not df.empty:
@@ -60,7 +58,7 @@ if not df.empty:
     st.sidebar.header("🔍 Filter Data")
     
     # Filter Jenis BMN
-    col_jenis = [c for c in df.columns if c.lower() == "jenis bmn"]
+    col_jenis = [c for c in df.columns if "jenis bmn" in c.lower()]
     if col_jenis:
         jenis_col = col_jenis[0]
         list_jenis = ["Semua"] + sorted([str(x) for x in df[jenis_col].dropna().unique()])
@@ -69,7 +67,7 @@ if not df.empty:
         selected_jenis = "Semua"
 
     # Filter Kondisi
-    col_kondisi = [c for c in df.columns if c.lower() == "kondisi"]
+    col_kondisi = [c for c in df.columns if "kondisi" in c.lower()]
     if col_kondisi:
         kondisi_col = col_kondisi[0]
         list_kondisi = ["Semua"] + sorted([str(x) for x in df[kondisi_col].dropna().unique()])
@@ -77,8 +75,8 @@ if not df.empty:
     else:
         selected_kondisi = "Semua"
 
-    # Search Box
-    search_query = st.sidebar.text_input("Cari Kata Kunci:")
+    # Filter Pencarian Kata Kunci
+    search_query = st.sidebar.text_input("Cari Kata Kunci (Nama Barang/Satker/Merk):")
 
     # --- PROSES FILTER DATA ---
     df_display = df.copy()
@@ -97,7 +95,7 @@ if not df.empty:
 
     # --- STATISTIK RINGKAS ---
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Aset Ditampilkan", len(df_display))
+    col1.metric("Total Aset", len(df_display))
     if col_jenis:
         col2.metric("Jumlah Jenis BMN", df_display[col_jenis[0]].nunique())
     if col_kondisi:
@@ -119,4 +117,4 @@ if not df.empty:
         mime="text/csv",
     )
 else:
-    st.warning("Data kosong atau gagal dimuat.")
+    st.warning("Data tidak berhasil dimuat.")
