@@ -11,7 +11,7 @@ st.title("📦 Dashboard Data Aset BMN")
 st.write("Aplikasi visualisasi dan pencarian data aset Barang Milik Negara (BMN).")
 
 # Menggunakan file CSV
-FILE_PATH = "daftar-aset.csv"
+FILE_PATH = "daftar-aset-clean.csv"
 
 KOLOM_PILIHAN = [
     "Jenis BMN",
